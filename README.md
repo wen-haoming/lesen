@@ -55,7 +55,7 @@ pnpm release:images                   # 商店配图，输入仅 release-screens
 
 ## 发布与下载（用户向）
 
-- 用户公开下载：**GitHub Release** 上的 `lesen-<版本>-sideload-chrome-mv3.zip` 与 `SHA256SUMS.txt`，不是 Actions 里的临时 drill 产物。  
+- 用户公开下载：每个 Release **仅** 2 个附件 — `lesen-<版本>-sideload-chrome-mv3.zip` + 对应 `SHA256SUMS.txt`（只含该 zip）；截图与源码包在 Actions，不进 Release。  
 - 自动发行：推送 `lesen-v*.*.*`（或兼容 `owlivo-v*.*.*`）tag 触发 [release.yml](.github/workflows/release.yml)。  
 - 细节、校验步骤、与商店差异：[docs/RELEASE_DOWNLOADS.md](docs/RELEASE_DOWNLOADS.md)。
 

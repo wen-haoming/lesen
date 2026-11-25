@@ -159,8 +159,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
-          pattern: lesen-${{ needs.resolve-version.outputs.version }}-*
-          merge-multiple: true
+          name: lesen-${{ needs.resolve-version.outputs.version }}-artifacts
           path: release-assets
       - name: Idempotent release guard
         env:
@@ -176,24 +175,23 @@ jobs:
           node scripts/extract-release-notes.mjs "${{ needs.resolve-version.outputs.version }}" > release-notes.md
           {
             echo ""
-            echo "## 下载与校验"
+            echo "## 下载"
             echo ""
-            echo "**可安装包（侧载）**：附件 \`lesen-${{ needs.resolve-version.outputs.version }}-sideload-chrome-mv3.zip\` 解压后在 Chrome「开发者模式」→「加载已解压的扩展程序」指向解压目录。"
-            echo "**非安装用途**：\`lesen-*-source.tar.gz\` 为源码归档；PNG 截图为商店/说明用，不能直接当扩展安装。"
+            echo "请只下载本页附件中的 **\`lesen-${{ needs.resolve-version.outputs.version }}-sideload-chrome-mv3.zip\`**（侧载安装包）及 **\`SHA256SUMS.txt\`**（仅含该 zip 的校验和）。"
             echo ""
-            echo "**与 Chrome 网上应用店版的差异（本 Release 默认构建）**：不含官方生产 OAuth/分析公网配置，需自配 \`.env.production.local\` 后本地 \`pnpm build\` 才能得到与商店接近的登录能力；**无自动更新**，版本需自行跟进后续 Release。"
-            echo "无需自配即可用的能力：本地阅读、雪球/X/微博源（在各自站点登录前提下）、设置与公开广场等核心浏览功能（以当前构建为准）。"
+            echo "1. 解压 zip → \`chrome://extensions\` → 开发者模式 → **加载已解压的扩展程序** → 选解压后的文件夹。"
+            echo "2. \`sha256sum -c SHA256SUMS.txt\`（或在当前目录对照校验和）。"
             echo ""
-            echo "校验：\`SHA256SUMS.txt\`；安装步骤详见 [docs/RELEASE_DOWNLOADS.md](https://github.com/${{ github.repository }}/blob/main/docs/RELEASE_DOWNLOADS.md)。"
-            echo "Chrome 网上应用店送审与自动更新仍走既有 CNB/运维流程；本 GitHub Release **不**代表商店已上架新版本。"
+            echo "本 Release 默认构建 **不含** 商店生产 OAuth/分析配置，**不会** 像 Chrome 网上应用店版那样自动更新；账号相关能力需按 [SELF_HOSTING.md](https://github.com/${{ github.repository }}/blob/main/SELF_HOSTING.md) 自配后本地构建，或继续使用 [商店安装](https://chromewebstore.google.com/detail/lesen-%C2%B7-%E8%8E%B1%E6%A3%AE-%C2%B7-%E5%A4%9A%E6%BA%90%E4%BF%A1%E6%81%AF%E8%81%9A%E5%90%88/dakdgplahfkbblfpafdjeipneioajgdf)。"
+            echo ""
+            echo "页面底部的 **Source code (zip/tar.gz)** 为 GitHub 自动生成的仓库快照，**不能**当作可加载的扩展。"
+            echo "截图、源码包、构建清单等维护者资料见 [docs/RELEASE_DOWNLOADS.md](https://github.com/${{ github.repository }}/blob/main/docs/RELEASE_DOWNLOADS.md#维护者与-ci)（Actions 产物，非本页附件）。"
           } >> release-notes.md
-      - name: Collect assets
+      - name: Prepare release upload (user-facing whitelist)
         if: env.RELEASE_EXISTS != '1'
         run: |
-          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name 'manifest.json' -o -name 'PROVENANCE.json' -o -name '*.png' -o -name 'SOURCES.json' \) -print
-          mkdir -p upload
-          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name 'manifest.json' -o -name 'PROVENANCE.json' -o -name '*.png' -o -name 'SOURCES.json' \) -exec cp {} upload/ \;
-          test -n "$(find upload -maxdepth 1 -name 'lesen-*-sideload-chrome-mv3.zip' -print -quit)" || (echo "Missing sideload zip in release assets" && exit 1)
+          node scripts/ci/prepare-github-release-upload.mjs release-assets upload
+          ls -la upload/
       - name: Create GitHub Release
         if: env.RELEASE_EXISTS != '1'
         uses: softprops/action-gh-release@v2
