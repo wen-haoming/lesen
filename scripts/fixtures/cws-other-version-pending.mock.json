@@ -1,0 +1,13 @@
+{
+  "_comment": "MOCK: published 1.8.4, different version 1.8.7 pending review",
+  "publishedItemRevisionStatus": {
+    "state": "PUBLISHED",
+    "distributionChannels": [{ "crxVersion": "1.8.4" }]
+  },
+  "submittedItemRevisionStatus": {
+    "state": "PENDING_REVIEW",
+    "distributionChannels": [{ "crxVersion": "1.8.7" }]
+  },
+  "lastAsyncUploadState": "SUCCEEDED",
+  "takenDown": false
+}

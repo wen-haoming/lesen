@@ -16,10 +16,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm compile
-      - run: pnpm exec vp test run scripts/cws-lib.test.mjs scripts/cws-tag-gate.test.mjs scripts/cws-master-gate.test.mjs
+      - run: pnpm exec vp test run scripts/cws-lib.test.mjs scripts/cws-tag-gate.test.mjs scripts/cws-master-gate.test.mjs scripts/cws-plan-boundaries.test.mjs scripts/ci/cws-production-env-guard.test.mjs
       - run: pnpm test
       - run: pnpm typecheck
       - run: pnpm build
       - run: node scripts/smoke-verify.mjs
       - run: node scripts/verify-versions.mjs
       - run: node scripts/cws.mjs plan --dry-run --mock-status @scripts/fixtures/cws-store-published-1.8.4.mock.json
+      - run: node scripts/scan-release-artifacts.mjs

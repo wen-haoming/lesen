@@ -13,6 +13,24 @@ const shaA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 const shaB = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
 const shaZero = '0'.repeat(40)
 
+describe('decideMasterReleaseGate before sha', () => {
+  it('rejects zero before sha (initial push / race)', () => {
+    const gate = decideMasterReleaseGate({
+      event: 'push',
+      branch: 'main',
+      packageVersion: '1.8.9',
+      previousVersion: '1.8.8',
+      manifestVersion: '1.8.9',
+      previousManifestVersion: '1.8.8',
+      headSha: shaA,
+      cnbCommit: shaA,
+      beforeSha: shaZero,
+    })
+    expect(gate.ok).toBe(false)
+    expect(gate.code).toBe('MISSING_BEFORE_SHA')
+  })
+})
+
 describe('decideMasterEventGate', () => {
   it('allows only trusted main/master push', () => {
     expect(decideMasterEventGate({ event: 'push', branch: 'master' }).ok).toBe(true)

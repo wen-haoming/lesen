@@ -37,12 +37,15 @@ env:
 
 jobs:
   pr-checks:
-    if: github.event_name == 'pull_request'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - run: node scripts/ci/assert-pr-cws-sandbox.mjs
       - uses: pnpm/action-setup@v4
         with:
           version: 10.11.1
@@ -52,7 +55,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm compile
-      - run: pnpm exec vp test run scripts/cws-lib.test.mjs scripts/cws-tag-gate.test.mjs scripts/cws-master-gate.test.mjs
+      - run: pnpm exec vp test run scripts/cws-lib.test.mjs scripts/cws-tag-gate.test.mjs scripts/cws-master-gate.test.mjs scripts/cws-plan-boundaries.test.mjs scripts/ci/cws-production-env-guard.test.mjs
       - run: pnpm test
       - run: pnpm typecheck
       - run: pnpm build
@@ -61,13 +64,14 @@ jobs:
       - run: node scripts/cws.mjs plan --dry-run --mock-status @scripts/fixtures/cws-store-published-1.8.4.mock.json
       - run: node scripts/package-artifacts.mjs
       - run: node scripts/generate-release-images.mjs
+      - run: node scripts/scan-release-artifacts.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: pr-release-drill-${{ github.run_id }}
           path: dist-artifacts/
 
   main-push:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == github.event.repository
     runs-on: ubuntu-latest
     environment: ${{ vars.CWS_PIPELINE_ENABLED == 'true' && 'chrome-web-store' || '' }}
     steps:
@@ -95,6 +99,14 @@ jobs:
           WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }}
           WXT_PUBLIC_ANALYTICS_ENDPOINT: ${{ secrets.WXT_PUBLIC_ANALYTICS_ENDPOINT }}
+      - name: Trusted production binding check
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        env:
+          CWS_REQUIRE_TRUSTED_BINDINGS: "1"
+          CWS_TRUSTED_SUPABASE_URL: ${{ secrets.CWS_TRUSTED_SUPABASE_URL }}
+          CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY }}
+          CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID }}
+        run: node scripts/ci/cws-production-env-guard.mjs
       - name: Map CWS credentials (CWS_* or CHROME_*)
         if: vars.CWS_PIPELINE_ENABLED == 'true'
         run: |
@@ -117,7 +129,10 @@ jobs:
         run: bash scripts/ci/cws-main-release.sh
 
   tag-push:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    if: >-
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/') &&
+      github.repository == github.event.repository
     runs-on: ubuntu-latest
     environment: ${{ vars.CWS_PIPELINE_ENABLED == 'true' && 'chrome-web-store' || '' }}
     steps:
@@ -144,6 +159,14 @@ jobs:
           WXT_PUBLIC_SUPABASE_URL: ${{ secrets.WXT_PUBLIC_SUPABASE_URL }}
           WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }}
+      - name: Trusted production binding check
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        env:
+          CWS_REQUIRE_TRUSTED_BINDINGS: "1"
+          CWS_TRUSTED_SUPABASE_URL: ${{ secrets.CWS_TRUSTED_SUPABASE_URL }}
+          CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY }}
+          CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID }}
+        run: node scripts/ci/cws-production-env-guard.mjs
       - name: Map CWS credentials
         if: vars.CWS_PIPELINE_ENABLED == 'true'
         run: |
