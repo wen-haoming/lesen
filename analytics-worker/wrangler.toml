@@ -1,0 +1,11 @@
+name = "lesen-analytics"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Create the namespace after login:
+#   npx wrangler kv namespace create EVENTS
+# then replace the id below. Preview bindings are enough for wrangler dev.
+[[kv_namespaces]]
+binding = "EVENTS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+preview_id = "REPLACE_AFTER_CREATE"

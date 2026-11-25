@@ -1,0 +1,849 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* 明暗由 .dark class 驱动（可跟随系统）；风格由 data-theme 驱动 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  shadcn/ui 官方主题：style = new-york，baseColor = slate
+  来源：https://ui.shadcn.com/themes （Slate）
+  选择理由：冷灰蓝中性色适合高密度阅读；对比清晰；非 violet/purple 渐变；相对旧暖纸色是明确换肤。
+  无装饰性阴影 / 无 backdrop-blur。
+  tw-animate-css：提供官网同款 animate-in / fade / zoom（Dialog、Select、Tooltip 等）。
+*/
+
+@theme inline {
+  /* 关闭 Tailwind 装饰性阴影工具类（含 hover:shadow-*） */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+  --shadow-lg: 0 0 #0000;
+  --shadow-xl: 0 0 #0000;
+  --shadow-2xl: 0 0 #0000;
+  --drop-shadow-sm: 0 0 #0000;
+  --drop-shadow-md: 0 0 #0000;
+  --drop-shadow-lg: 0 0 #0000;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--card);
+  --color-surface-subtle: var(--muted);
+  --color-rail: var(--rail);
+  --color-rail-foreground: var(--rail-foreground);
+  --color-rail-muted: var(--rail-muted);
+  --color-rail-border: var(--rail-border);
+  --color-foreground-soft: var(--secondary-foreground);
+  --color-primary-soft: var(--secondary);
+  --color-border-strong: var(--border);
+  --color-xq: oklch(0.55 0.04 250);
+  --color-x: oklch(0.45 0.02 260);
+  --font-sans: var(--font-sans-stack);
+}
+
+:root {
+  --popup-h: 620px;
+  --radius: 0.5rem;
+  /*
+    默认 = 砚灰（Readwise Crisp / Reeder 纸感冷白 + 碳黑墨水 + 钴蓝点缀）。
+    六套阅读配色完整 token 见下方 html[data-theme] 块；此处保证首帧不闪色。
+  */
+  --rail: #f1f3f6;
+  --rail-foreground: #16191e;
+  --rail-muted: #555e6b;
+  --rail-border: #e2e6ec;
+  --background: #f8f9fb;
+  --foreground: #16191e;
+  --card: #ffffff;
+  --card-foreground: #16191e;
+  --popover: #ffffff;
+  --popover-foreground: #16191e;
+  --primary: #2457b2;
+  --primary-foreground: #ffffff;
+  --secondary: #edf0f5;
+  --secondary-foreground: #1e242c;
+  --muted: #eff2f6;
+  --muted-foreground: #555e6b;
+  --accent: #eaeff5;
+  --accent-foreground: #16191e;
+  --destructive: #b9382c;
+  --destructive-foreground: #ffffff;
+  --border: #e2e6ec;
+  --input: #d8dde6;
+  --ring: #2457b2;
+  /*
+    阅读向字体栈与整体尺寸：默认系统黑体 + 标准档。
+    字体由 html[data-font] 切换（仅用本机免费/系统字体，不拉外网）；
+    尺寸由 html[data-size] 缩放正文、元信息与基础 UI。
+  */
+  --font-sans-stack:
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system,
+    BlinkMacSystemFont, "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  --ui-size: 12px;
+  --author-size: 13px;
+  --meta-size: 11px;
+  --badge-size: 10px;
+  --reading-size: 14px;
+  --reading-leading: 1.76;
+  --reading-tracking: 0.008em;
+  --reading-size-compact: 13px;
+  --reading-leading-compact: 1.68;
+  --reading-size-spacious: 15px;
+  --reading-leading-spacious: 1.84;
+}
+
+/* 阅读字体：优先本机免费开源字体，再回退系统黑体/宋体/楷体 */
+html[data-font="system"] {
+  --font-sans-stack:
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system,
+    BlinkMacSystemFont, "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+}
+html[data-font="sans"] {
+  --font-sans-stack:
+    "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC",
+    "Microsoft YaHei UI", "Microsoft YaHei", "WenQuanYi Micro Hei", system-ui, sans-serif;
+}
+html[data-font="serif"] {
+  --font-sans-stack:
+    "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", SimSun,
+    Georgia, "Times New Roman", serif;
+}
+html[data-font="kai"] {
+  --font-sans-stack:
+    "Kaiti SC", STKaiti, KaiTi, "AR PL UKai CN", "Noto Serif SC", "Songti SC", serif;
+}
+html[data-font="yuan"] {
+  --font-sans-stack:
+    "Yuanti SC", STYuanti, "Hiragino Maru Gothic ProN", "PingFang SC", "Microsoft YaHei", system-ui,
+    sans-serif;
+}
+html[data-font="wenkai"] {
+  --font-sans-stack:
+    "LXGW WenKai", "LXGW WenKai Lite", "LXGW WenKai Screen", "Kaiti SC", STKaiti, KaiTi,
+    "Noto Serif SC", "Songti SC", serif;
+}
+
+/* 整体尺寸：正文、元信息与基础 UI 同步缩放 */
+html[data-size="sm"] {
+  --ui-size: 11px;
+  --author-size: 12px;
+  --meta-size: 10px;
+  --badge-size: 9px;
+  --reading-size: 13px;
+  --reading-leading: 1.68;
+  --reading-tracking: 0.006em;
+  --reading-size-compact: 12px;
+  --reading-leading-compact: 1.62;
+  --reading-size-spacious: 14px;
+  --reading-leading-spacious: 1.76;
+}
+html[data-size="md"] {
+  --ui-size: 12px;
+  --author-size: 13px;
+  --meta-size: 11px;
+  --badge-size: 10px;
+  --reading-size: 14px;
+  --reading-leading: 1.76;
+  --reading-tracking: 0.008em;
+  --reading-size-compact: 13px;
+  --reading-leading-compact: 1.68;
+  --reading-size-spacious: 15px;
+  --reading-leading-spacious: 1.84;
+}
+html[data-size="lg"] {
+  --ui-size: 13px;
+  --author-size: 14px;
+  --meta-size: 12px;
+  --badge-size: 11px;
+  --reading-size: 15.5px;
+  --reading-leading: 1.8;
+  --reading-tracking: 0.016em;
+  --reading-size-compact: 14.5px;
+  --reading-leading-compact: 1.66;
+  --reading-size-spacious: 16.5px;
+  --reading-leading-spacious: 1.88;
+}
+html[data-size="xl"] {
+  --ui-size: 14px;
+  --author-size: 15px;
+  --meta-size: 13px;
+  --badge-size: 12px;
+  --reading-size: 17px;
+  --reading-leading: 1.84;
+  --reading-tracking: 0.018em;
+  --reading-size-compact: 16px;
+  --reading-leading-compact: 1.7;
+  --reading-size-spacious: 18px;
+  --reading-leading-spacious: 1.92;
+}
+
+/* 时间线与顶栏：无 sticky 日期条叠层，避免固定区与列表之间出现断层缝 */
+.timeline-flush-top {
+  margin-top: 0;
+}
+
+/* 顶栏下沿虚化：实色头像区保持清晰，接缝用极短渐隐软化硬切（非毛玻璃） */
+.reader-chrome-fade {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--background) 42%, transparent) 0%,
+    color-mix(in oklab, var(--background) 14%, transparent) 60%,
+    transparent 100%
+  );
+}
+
+/* ------------------------------------------------------------------
+   六套阅读器纸墨配色 × 明暗（参考 Flexoki / Apple Books / Readwise / Radix）：
+   1. 浅色统一同色系微凹边栏，摒弃后台模板式的重黑/深绿/深褐侧栏；
+   2. 避开刺眼 #FFFFFF 纯白与 #000000 眩光纯黑，正文对比度锁定在 12.6:1–17.9:1；
+   3. 主题色克制用于焦点环、更新点与主行动，不铺满常规开关。
+   切换：<html data-theme="graphite|paper|noir|moss|tide|clay"> + class="dark"
+   ------------------------------------------------------------------ */
+
+/* A · 砚灰（Readwise Crisp / Reeder）：清透冷白纸面 + 碳素墨 + 钴蓝点缀 */
+html[data-theme="graphite"] {
+  --rail: #f1f3f6;
+  --rail-foreground: #16191e;
+  --rail-muted: #555e6b;
+  --rail-border: #e2e6ec;
+  --background: #f8f9fb;
+  --foreground: #16191e;
+  --card: #ffffff;
+  --card-foreground: #16191e;
+  --popover: #ffffff;
+  --popover-foreground: #16191e;
+  --primary: #2457b2;
+  --primary-foreground: #ffffff;
+  --secondary: #edf0f5;
+  --secondary-foreground: #1e242c;
+  --muted: #eff2f6;
+  --muted-foreground: #555e6b;
+  --accent: #eaeff5;
+  --accent-foreground: #16191e;
+  --border: #e2e6ec;
+  --input: #d8dde6;
+  --ring: #2457b2;
+}
+
+/* A · 砚灰深色：曜石暗板 + 银白柔墨 + 晴空钴蓝 */
+html[data-theme="graphite"].dark {
+  --rail: #101215;
+  --rail-foreground: #e2e5ec;
+  --rail-muted: #9098a6;
+  --rail-border: #22262e;
+  --background: #14161a;
+  --foreground: #e2e5ec;
+  --card: #1c1f25;
+  --card-foreground: #e2e5ec;
+  --popover: #1f232a;
+  --popover-foreground: #e2e5ec;
+  --primary: #6a9cf0;
+  --primary-foreground: #101622;
+  --secondary: #282d36;
+  --secondary-foreground: #e2e5ec;
+  --muted: #181b20;
+  --muted-foreground: #9098a6;
+  --accent: #252a33;
+  --accent-foreground: #ebeef4;
+  --border: #272c35;
+  --input: #343a46;
+  --ring: #6a9cf0;
+}
+
+/* B · 宣纸（Steph Ango Flexoki）：棉宣微暖底 + 松烟墨 + 朱砂印泥 */
+html[data-theme="paper"] {
+  --rail: #f3f0e6;
+  --rail-foreground: #141312;
+  --rail-muted: #62605a;
+  --rail-border: #e5e1d4;
+  --background: #fcfbf5;
+  --foreground: #141312;
+  --card: #fffefa;
+  --card-foreground: #141312;
+  --popover: #fffefa;
+  --popover-foreground: #141312;
+  --primary: #ad342b;
+  --primary-foreground: #fffdfb;
+  --secondary: #efece1;
+  --secondary-foreground: #1e1d1b;
+  --muted: #f2efe5;
+  --muted-foreground: #62605a;
+  --accent: #ece8dc;
+  --accent-foreground: #141312;
+  --border: #e5e1d4;
+  --input: #dad5c6;
+  --ring: #ad342b;
+}
+
+/* B · 宣纸深色（Flexoki Dark）：焦墨夜底 + 宣石柔字 + 朱膘点缀 */
+html[data-theme="paper"].dark {
+  --rail: #100f0e;
+  --rail-foreground: #dbd8ce;
+  --rail-muted: #949189;
+  --rail-border: #24221f;
+  --background: #141312;
+  --foreground: #dbd8ce;
+  --card: #1c1b19;
+  --card-foreground: #dbd8ce;
+  --popover: #201f1c;
+  --popover-foreground: #dbd8ce;
+  --primary: #e06c60;
+  --primary-foreground: #1a0f0e;
+  --secondary: #2a2825;
+  --secondary-foreground: #dbd8ce;
+  --muted: #181715;
+  --muted-foreground: #949189;
+  --accent: #272522;
+  --accent-foreground: #e6e3da;
+  --border: #292724;
+  --input: #383531;
+  --ring: #e06c60;
+}
+
+/* C · 水墨（Kindle Carta E-Ink）：零彩度电纸灰白 + 纯粹浓墨 */
+html[data-theme="noir"] {
+  --rail: #ecece9;
+  --rail-foreground: #171716;
+  --rail-muted: #595956;
+  --rail-border: #dfdfdb;
+  --background: #f5f5f3;
+  --foreground: #171716;
+  --card: #fafaf8;
+  --card-foreground: #171716;
+  --popover: #fafaf8;
+  --popover-foreground: #171716;
+  --primary: #262624;
+  --primary-foreground: #fafaf8;
+  --secondary: #e8e8e4;
+  --secondary-foreground: #1e1e1c;
+  --muted: #eaeae6;
+  --muted-foreground: #595956;
+  --accent: #e4e4e0;
+  --accent-foreground: #171716;
+  --border: #dfdfdb;
+  --input: #d3d3ce;
+  --ring: #262624;
+}
+
+/* C · 水墨深色：天鹅绒炭黑 + 雾银墨字 + 纯白焦点 */
+html[data-theme="noir"].dark {
+  --rail: #0d0d0c;
+  --rail-foreground: #dfdfdc;
+  --rail-muted: #91918d;
+  --rail-border: #222220;
+  --background: #121211;
+  --foreground: #dfdfdc;
+  --card: #1a1a19;
+  --card-foreground: #dfdfdc;
+  --popover: #1e1e1c;
+  --popover-foreground: #dfdfdc;
+  --primary: #e5e5e0;
+  --primary-foreground: #141413;
+  --secondary: #282826;
+  --secondary-foreground: #dfdfdc;
+  --muted: #161615;
+  --muted-foreground: #91918d;
+  --accent: #252523;
+  --accent-foreground: #eaeae7;
+  --border: #272725;
+  --input: #363633;
+  --ring: #e5e5e0;
+}
+
+/* D · 青竹（Radix Sage / 宋瓷竹纸）：极低彩度天青纸 + 松烟深墨 + 青釉点缀 */
+html[data-theme="moss"] {
+  --rail: #ecf1ee;
+  --rail-foreground: #17201c;
+  --rail-muted: #515e58;
+  --rail-border: #dce4df;
+  --background: #f5f8f6;
+  --foreground: #17201c;
+  --card: #fbfcfb;
+  --card-foreground: #17201c;
+  --popover: #fbfcfb;
+  --popover-foreground: #17201c;
+  --primary: #1f6e60;
+  --primary-foreground: #f8fcfa;
+  --secondary: #e7eeea;
+  --secondary-foreground: #1d2823;
+  --muted: #eaf0ed;
+  --muted-foreground: #515e58;
+  --accent: #e3ece7;
+  --accent-foreground: #17201c;
+  --border: #dce4df;
+  --input: #cfdad3;
+  --ring: #1f6e60;
+}
+
+/* D · 青竹深色：深松石板 + 竹雾柔白 + 翠青釉色 */
+html[data-theme="moss"].dark {
+  --rail: #0e1311;
+  --rail-foreground: #dae2de;
+  --rail-muted: #8c9b94;
+  --rail-border: #202925;
+  --background: #131816;
+  --foreground: #dae2de;
+  --card: #1b221f;
+  --card-foreground: #dae2de;
+  --popover: #1f2723;
+  --popover-foreground: #dae2de;
+  --primary: #55b4a3;
+  --primary-foreground: #0e1d1a;
+  --secondary: #26302c;
+  --secondary-foreground: #dae2de;
+  --muted: #171d1b;
+  --muted-foreground: #8c9b94;
+  --accent: #232d29;
+  --accent-foreground: #e5ece9;
+  --border: #252f2b;
+  --input: #33403b;
+  --ring: #55b4a3;
+}
+
+/* E · 雾蓝（Readwise Slate / Nord）：北欧冷雾纸面 + 深岩蓝墨 + 钢蓝点缀 */
+html[data-theme="tide"] {
+  --rail: #ebf0f5;
+  --rail-foreground: #161f29;
+  --rail-muted: #505d6b;
+  --rail-border: #dce3ec;
+  --background: #f4f7fa;
+  --foreground: #161f29;
+  --card: #fafcfe;
+  --card-foreground: #161f29;
+  --popover: #fafcfe;
+  --popover-foreground: #161f29;
+  --primary: #245a87;
+  --primary-foreground: #f8fbfe;
+  --secondary: #e6edf4;
+  --secondary-foreground: #1c2733;
+  --muted: #e9eff6;
+  --muted-foreground: #505d6b;
+  --accent: #e2eaf2;
+  --accent-foreground: #161f29;
+  --border: #dce3ec;
+  --input: #cfd8e3;
+  --ring: #245a87;
+}
+
+/* E · 雾蓝深色：极夜岩蓝 + 冰雾白字 + 晴霜蓝 */
+html[data-theme="tide"].dark {
+  --rail: #0f141a;
+  --rail-foreground: #d9e1ea;
+  --rail-muted: #8d9ca9;
+  --rail-border: #212b36;
+  --background: #141a21;
+  --foreground: #d9e1ea;
+  --card: #1c242d;
+  --card-foreground: #d9e1ea;
+  --popover: #202934;
+  --popover-foreground: #d9e1ea;
+  --primary: #6ba4d4;
+  --primary-foreground: #0f1a24;
+  --secondary: #27323f;
+  --secondary-foreground: #d9e1ea;
+  --muted: #181f27;
+  --muted-foreground: #8d9ca9;
+  --accent: #242e3b;
+  --accent-foreground: #e4ecf3;
+  --border: #26313d;
+  --input: #344353;
+  --ring: #6ba4d4;
+}
+
+/* F · 暖沙（Apple Books Calm / Sepia）：羊皮古籍纸 + 深焙咖啡墨 + 书签铜褐 */
+html[data-theme="clay"] {
+  --rail: #ede4d3;
+  --rail-foreground: #221b15;
+  --rail-muted: #61564b;
+  --rail-border: #e1d6c3;
+  --background: #f6efe2;
+  --foreground: #221b15;
+  --card: #faf5ec;
+  --card-foreground: #221b15;
+  --popover: #faf5ec;
+  --popover-foreground: #221b15;
+  --primary: #995120;
+  --primary-foreground: #fdf9f3;
+  --secondary: #eae0ce;
+  --secondary-foreground: #2b231b;
+  --muted: #ece3d3;
+  --muted-foreground: #61564b;
+  --accent: #e6dbc8;
+  --accent-foreground: #221b15;
+  --border: #e1d6c3;
+  --input: #d5c8b2;
+  --ring: #995120;
+}
+
+/* F · 暖沙深色：深焙夜读底 + 羊皮暖白 + 琥珀书签 */
+html[data-theme="clay"].dark {
+  --rail: #13100e;
+  --rail-foreground: #dfd6ca;
+  --rail-muted: #9b9084;
+  --rail-border: #28221d;
+  --background: #191512;
+  --foreground: #dfd6ca;
+  --card: #221d19;
+  --card-foreground: #dfd6ca;
+  --popover: #27211c;
+  --popover-foreground: #dfd6ca;
+  --primary: #d89056;
+  --primary-foreground: #1f140b;
+  --secondary: #312a24;
+  --secondary-foreground: #dfd6ca;
+  --muted: #1d1815;
+  --muted-foreground: #9b9084;
+  --accent: #2d2620;
+  --accent-foreground: #eae2d7;
+  --border: #2e2721;
+  --input: #3e352d;
+  --ring: #d89056;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  /* 仅工具栏 popup 固定尺寸；独立窗口、侧栏与手动打开的多列首页随容器撑满 */
+  html:not([data-mode="window"]):not([data-mode="sidebar"]):not([data-mode="home"]) {
+    width: 420px;
+    min-width: 360px;
+    height: var(--popup-h, 620px);
+    min-height: var(--popup-h, 620px);
+    max-height: var(--popup-h, 620px);
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+
+  html:not([data-mode="window"]):not([data-mode="sidebar"]):not([data-mode="home"]) body,
+  html[data-mode="window"],
+  html[data-mode="window"] body,
+  html[data-mode="sidebar"],
+  html[data-mode="sidebar"] body,
+  html[data-mode="home"],
+  html[data-mode="home"] body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans-stack);
+    font-size: var(--ui-size, 12px);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  summary:focus-visible,
+  [role="button"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [role="option"]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* 禁止装饰性阴影 / 毛玻璃；focus 用 outline，不用 box-shadow */
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl,
+  .drop-shadow,
+  .drop-shadow-sm,
+  .drop-shadow-md {
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 18%, transparent);
+    color: var(--foreground);
+  }
+}
+
+@layer utilities {
+  /* 信息流正文：各主题 --foreground 已按纸墨对比度校准，不再二次半透明冲淡字重 */
+  .text-pretty-body {
+    text-wrap: pretty;
+    font-family: var(--font-sans-stack);
+    font-weight: 400;
+    letter-spacing: var(--reading-tracking);
+    line-height: var(--reading-leading);
+    font-size: var(--reading-size);
+    color: var(--foreground);
+    /* 中英文 / 数字之间自动留「盘古之白」，行首全角标点去半格（Chrome 140+ / 123+，旧版忽略） */
+    text-autospace: normal;
+    text-spacing-trim: trim-start;
+  }
+  /* 多行折叠：-webkit-line-clamp 由组件按行数注入 */
+  .clamp-lines {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* 雪球表情：随正文字号缩放，基线下沉对齐汉字中线 */
+  .rt-face {
+    display: inline-block;
+    width: 1.2em;
+    height: 1.2em;
+    margin: 0 0.06em;
+    vertical-align: -0.24em;
+    object-fit: contain;
+  }
+  /* @提及 / $股票$：主色弱链接，不加下划线不抢正文 */
+  .rt-link {
+    color: color-mix(in oklab, var(--primary) 88%, var(--foreground));
+    font-weight: 500;
+  }
+  /* 正文裸链接：收敛域名短链，悬停下划线 */
+  .rt-url {
+    color: color-mix(in oklab, var(--primary) 88%, var(--foreground));
+    text-decoration-line: none;
+    text-underline-offset: 3px;
+    word-break: break-all;
+  }
+  .rt-url:hover {
+    text-decoration-line: underline;
+  }
+  /* #话题# 标签：降为次级墨色，让作者核心观点突出 */
+  .rt-tag {
+    color: var(--muted-foreground);
+  }
+  .text-pretty-body[data-density="compact"] {
+    font-size: var(--reading-size-compact);
+    line-height: var(--reading-leading-compact);
+  }
+  .text-pretty-body[data-density="spacious"] {
+    font-size: var(--reading-size-spacious);
+    line-height: var(--reading-leading-spacious);
+  }
+
+  .content-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
+  }
+
+  /* 数字等宽：计数、时间不跳字，扫读时列对齐 */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* 左栏信息源列表：隐藏滚动条，靠间距提示可滚动 */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 阅读流细滚动条：Chromium 走 5px 圆角透明轨道，非 WebKit 引擎回退标准细滚动条 */
+  @supports not selector(::-webkit-scrollbar) {
+    .reader-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--muted-foreground) 28%, transparent) transparent;
+    }
+  }
+  .reader-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .reader-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .reader-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--muted-foreground) 24%, transparent);
+  }
+  .reader-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--muted-foreground) 44%, transparent);
+  }
+
+  /* 切换信息源：列表左右滑入 */
+  @keyframes feed-slide-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes feed-slide-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  .feed-slide-from-right {
+    animation: feed-slide-from-right 220ms ease-out;
+  }
+  .feed-slide-from-left {
+    animation: feed-slide-from-left 220ms ease-out;
+  }
+
+  /* 顶部更新胶囊：从顶栏下沿落下，提示有新内容可回到最新 */
+  @keyframes fresh-cue-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -6px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+  .fresh-cue {
+    animation: fresh-cue-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fresh-cue {
+      animation: none;
+    }
+  }
+
+  /* 选中信息源：用 outline 环而非阴影（项目禁用装饰性阴影） */
+  .rail-avatar[data-active="true"] {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /*
+    平台选择分段控件：选中态用实底胶囊 + 主色文字，替代组件库默认的白底 + 阴影，
+    也不再用整格外描边（格子比图标宽，描边会变成空框）。
+  */
+  .picker-tabs [data-slot="tabs-trigger"] {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted-foreground);
+    opacity: 0.55;
+    transition:
+      opacity 140ms ease,
+      background-color 140ms ease,
+      color 140ms ease;
+  }
+  .picker-tabs [data-slot="tabs-trigger"]:hover {
+    opacity: 0.85;
+  }
+  .picker-tabs [data-slot="tabs-trigger"]:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+  .picker-tabs [data-slot="tabs-trigger"][data-state="active"] {
+    background: var(--card);
+    box-shadow: none;
+    color: var(--primary);
+    opacity: 1;
+  }
+  .picker-tabs [data-slot="tabs-trigger"][data-state="active"] svg {
+    filter: none;
+  }
+  .picker-tabs [data-slot="tabs-trigger"] svg {
+    filter: grayscale(1);
+    transition: filter 140ms ease;
+  }
+
+  /* 行分隔线通栏整行；跟随主题纸张边线柔和过渡，不抢正文视线 */
+  .row-hairline {
+    position: relative;
+  }
+  .row-hairline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: color-mix(in oklab, var(--border) 78%, transparent);
+  }
+  .row-hairline:last-child::after {
+    display: none;
+  }
+
+  /*
+    左栏动作按钮：统一同色系微凹边栏上的安静工具态，不塞抢眼纯色块。
+    图标尺寸由组件负责，避免每个图标写 size-*。
+  */
+  .rail-action {
+    color: var(--rail-muted);
+  }
+  .rail-action:hover {
+    background: color-mix(in oklab, var(--rail-foreground) 8%, transparent);
+    color: var(--rail-foreground);
+  }
+  .rail-action[data-active="true"],
+  .rail-action[data-state="on"] {
+    background: color-mix(in oklab, var(--rail-foreground) 12%, transparent);
+    color: var(--rail-foreground);
+  }
+  .rail-action[data-state="on"] svg {
+    fill: currentColor;
+  }
+  .rail-action[data-accent="true"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  .rail-action[data-accent="true"]:hover {
+    background: color-mix(in oklab, var(--primary) 88%, black);
+    color: var(--primary-foreground);
+  }
+  .rail-action svg {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  .lightbox-close svg {
+    width: 16px;
+    height: 16px;
+  }
+  .lightbox-control svg {
+    width: 20px;
+    height: 20px;
+  }
+}
