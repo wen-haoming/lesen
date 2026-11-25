@@ -1,0 +1,11 @@
+{
+  "version": "1.8.9",
+  "capturedAt": "2026-11-25",
+  "source": "Company Mac manual capture (T-11), sanitized for public release",
+  "files": [
+    { "path": "public/v1.8.9/01-popup.png", "role": "screenshot", "label": "popup" },
+    { "path": "public/v1.8.9/02-sidepanel.png", "role": "screenshot", "label": "sidepanel" },
+    { "path": "public/v1.8.9/03-home.png", "role": "screenshot", "label": "home" },
+    { "path": "public/v1.8.9/04-discover.png", "role": "marquee", "label": "discover" }
+  ]
+}

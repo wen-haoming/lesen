@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ANALYTICS_CONSENT_KEY, ANALYTICS_ID_KEY, ANALYTICS_QUEUE_KEY, createAnalytics, isAllowedAnalyticsEndpoint, platformFromKnownHost, sanitizeEvent, sanitizeException } from "./analytics";
+import { PRODUCT_VERSION } from "./product-version";
 
 const ENDPOINT = "https://owlivo-analytics.example.workers.dev/v1/events";
 
@@ -57,7 +58,7 @@ describe("analytics consent pipeline", () => {
     expect(body).toMatchObject({
       v: 1,
       install_id: "00000000-0000-4000-8000-000000000002",
-      release: "1.8.7",
+      release: PRODUCT_VERSION,
       events: [{ event: "reader_opened", properties: { count: 2 }, at: 5000 }],
     });
     expect(JSON.stringify(body)).not.toMatch(/api_key|posthog|distinct_id|cookie|SECRET/i);

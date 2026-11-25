@@ -1,0 +1,16 @@
+{
+  "_comment": "MOCK ONLY: simulated Chrome Web Store fetchStatus for tests/dry-run. Not a live API response. Known public version as of 2026-11-16 Asia/Shanghai is 1.8.4.",
+  "itemId": "mock-item",
+  "takenDown": false,
+  "warned": false,
+  "lastAsyncUploadState": null,
+  "publishedItemRevisionStatus": {
+    "state": "PUBLISHED",
+    "distributionChannels": [
+      {
+        "crxVersion": "1.8.4",
+        "deployPercentage": 100
+      }
+    ]
+  }
+}

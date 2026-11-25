@@ -1,0 +1,184 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "lesen-v*.*.*"
+      - "owlivo-v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver that must match package.json (e.g. 1.8.9)"
+        required: true
+        type: string
+      create_github_release:
+        description: "Create GitHub Release assets (requires tag on this commit)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.out.outputs.version }}
+      tag: ${{ steps.out.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: out
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            case "$TAG" in
+              lesen-v*) VER="${TAG#lesen-v}" ;;
+              owlivo-v*) VER="${TAG#owlivo-v}" ;;
+              v*) VER="${TAG#v}" ;;
+              *) VER="$TAG" ;;
+            esac
+          else
+            VER="${{ inputs.version }}"
+            TAG="v${VER}"
+          fi
+          if [ "$PKG" != "$VER" ]; then
+            echo "package.json version $PKG does not match release target $VER"
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG_COMMIT="$(git rev-list -n 1 "$TAG^{commit}" 2>/dev/null || true)"
+            if [ -n "$TAG_COMMIT" ] && [ "$TAG_COMMIT" != "${{ github.sha }}" ]; then
+              echo "Tag $TAG points to $TAG_COMMIT but workflow SHA is ${{ github.sha }}"
+              exit 1
+            fi
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  test-build:
+    needs: resolve-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.20.2"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compile
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: node scripts/smoke-verify.mjs
+      - run: node scripts/verify-versions.mjs
+      - run: node scripts/package-artifacts.mjs
+      - run: node scripts/generate-release-images.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lesen-${{ needs.resolve-version.outputs.version }}-artifacts
+          path: |
+            dist-artifacts/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lesen-${{ needs.resolve-version.outputs.version }}-store-images
+          path: dist-artifacts/store-images/
+
+  official-zip:
+    needs: [resolve-version, test-build]
+    runs-on: ubuntu-latest
+    environment: chrome-web-store
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.20.2"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compile
+      - name: Write production public env (from secrets)
+        env:
+          WXT_PUBLIC_SUPABASE_URL: ${{ secrets.WXT_PUBLIC_SUPABASE_URL }}
+          WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }}
+          WXT_PUBLIC_ANALYTICS_ENDPOINT: ${{ secrets.WXT_PUBLIC_ANALYTICS_ENDPOINT }}
+        run: |
+          missing=0
+          for key in WXT_PUBLIC_SUPABASE_URL WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID; do
+            if [ -z "${!key}" ]; then
+              echo "::notice::Skipping official store zip — missing $key"
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 1 ]; then
+            echo "SKIP_OFFICIAL_ZIP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          {
+            echo "WXT_PUBLIC_SUPABASE_URL=${WXT_PUBLIC_SUPABASE_URL}"
+            echo "WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}"
+            echo "WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID=${WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID}"
+          } > .env.production.local
+          if [ -n "${WXT_PUBLIC_ANALYTICS_ENDPOINT}" ]; then
+            echo "WXT_PUBLIC_ANALYTICS_ENDPOINT=${WXT_PUBLIC_ANALYTICS_ENDPOINT}" >> .env.production.local
+          fi
+      - name: Build official store zip
+        if: env.SKIP_OFFICIAL_ZIP != '1'
+        run: |
+          pnpm exec wxt zip
+          node scripts/package-artifacts.mjs
+      - uses: actions/upload-artifact@v4
+        if: env.SKIP_OFFICIAL_ZIP != '1'
+        with:
+          name: lesen-${{ needs.resolve-version.outputs.version }}-chrome-store
+          path: dist-artifacts/lesen-${{ needs.resolve-version.outputs.version }}-chrome-store.zip
+
+  github-release:
+    needs: [resolve-version, test-build, official-zip]
+    if: github.event_name == 'push' || inputs.create_github_release == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: lesen-${{ needs.resolve-version.outputs.version }}-*
+          merge-multiple: true
+          path: release-assets
+      - name: Idempotent release guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ needs.resolve-version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "GitHub Release ${{ needs.resolve-version.outputs.tag }} already exists — skipping upload."
+            echo "RELEASE_EXISTS=1" >> "$GITHUB_ENV"
+          fi
+      - name: Write release notes
+        if: env.RELEASE_EXISTS != '1'
+        run: node scripts/extract-release-notes.mjs "${{ needs.resolve-version.outputs.version }}" > release-notes.md
+      - name: Collect assets
+        if: env.RELEASE_EXISTS != '1'
+        run: |
+          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name '*.png' -o -name 'SOURCES.json' \) -print
+          mkdir -p upload
+          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name '*.png' -o -name 'SOURCES.json' \) -exec cp {} upload/ \;
+      - name: Create GitHub Release
+        if: env.RELEASE_EXISTS != '1'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve-version.outputs.tag }}
+          name: Lesen v${{ needs.resolve-version.outputs.version }}
+          body_path: release-notes.md
+          files: upload/*
+          fail_on_unmatched_files: false
+          make_latest: true
+          draft: false

@@ -1,0 +1,190 @@
+name: cws-pipeline
+
+# 受信 main / 发布标签触发；与 CNB 共用语义。默认 CWS_PIPELINE_ENABLED!=true 时仅 dry-run/门禁。
+on:
+  push:
+    branches: [main]
+    tags: ["owlivo-v*.*.*", "lesen-v*.*.*"]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "CHANGELOG.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "wxt.config.ts"
+      - "tsconfig*.json"
+      - "vitest.config.ts"
+      - "public/**"
+      - "icons/**"
+      - "release-screenshots/**"
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "CHANGELOG.md"
+      - "package.json"
+      - "wxt.config.ts"
+      - "release-screenshots/**"
+      - "icons/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cws-release-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  CWS_KNOWN_PUBLISHED_FLOOR: ${{ vars.CWS_KNOWN_PUBLISHED_FLOOR || '1.8.4' }}
+  CWS_PIPELINE_ENABLED: ${{ vars.CWS_PIPELINE_ENABLED || 'false' }}
+
+jobs:
+  pr-checks:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: node scripts/ci/assert-pr-cws-sandbox.mjs
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.20.2"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compile
+      - run: pnpm exec vp test run scripts/cws-lib.test.mjs scripts/cws-tag-gate.test.mjs scripts/cws-master-gate.test.mjs scripts/cws-plan-boundaries.test.mjs scripts/ci/cws-production-env-guard.test.mjs
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: node scripts/smoke-verify.mjs
+      - run: node scripts/verify-versions.mjs
+      - run: node scripts/cws.mjs plan --dry-run --mock-status @scripts/fixtures/cws-store-published-1.8.4.mock.json
+      - run: node scripts/package-artifacts.mjs
+      - run: node scripts/generate-release-images.mjs
+      - run: node scripts/scan-release-artifacts.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-release-drill-${{ github.run_id }}
+          path: dist-artifacts/
+
+  main-push:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == github.event.repository
+    runs-on: ubuntu-latest
+    environment: ${{ vars.CWS_PIPELINE_ENABLED == 'true' && 'chrome-web-store' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.20.2"
+          cache: pnpm
+      - name: Production public env (live only)
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        run: |
+          test -n "$WXT_PUBLIC_SUPABASE_URL" -a -n "$WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" -a -n "$WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID"
+          {
+            echo "WXT_PUBLIC_SUPABASE_URL=$WXT_PUBLIC_SUPABASE_URL"
+            echo "WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+            echo "WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID=$WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID"
+          } > .env.production.local
+        env:
+          WXT_PUBLIC_SUPABASE_URL: ${{ secrets.WXT_PUBLIC_SUPABASE_URL }}
+          WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }}
+          WXT_PUBLIC_ANALYTICS_ENDPOINT: ${{ secrets.WXT_PUBLIC_ANALYTICS_ENDPOINT }}
+      - name: Trusted production binding check
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        env:
+          CWS_REQUIRE_TRUSTED_BINDINGS: "1"
+          CWS_TRUSTED_SUPABASE_URL: ${{ secrets.CWS_TRUSTED_SUPABASE_URL }}
+          CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY }}
+          CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID }}
+        run: node scripts/ci/cws-production-env-guard.mjs
+      - name: Map CWS credentials (CWS_* or CHROME_*)
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        run: |
+          echo "CWS_CLIENT_ID=${CWS_CLIENT_ID:-$CHROME_CLIENT_ID}" >> "$GITHUB_ENV"
+          echo "CWS_CLIENT_SECRET=${CWS_CLIENT_SECRET:-$CHROME_CLIENT_SECRET}" >> "$GITHUB_ENV"
+          echo "CWS_REFRESH_TOKEN=${CWS_REFRESH_TOKEN:-$CHROME_REFRESH_TOKEN}" >> "$GITHUB_ENV"
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      - name: Main release pipeline
+        env:
+          GITHUB_PIPELINE_EVENT: push
+          GITHUB_REF_NAME: main
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_BEFORE_SHA: ${{ github.event.before }}
+        run: bash scripts/ci/cws-main-release.sh
+
+  tag-push:
+    if: >-
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/') &&
+      github.repository == github.event.repository
+    runs-on: ubuntu-latest
+    environment: ${{ vars.CWS_PIPELINE_ENABLED == 'true' && 'chrome-web-store' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.20.2"
+          cache: pnpm
+      - name: Production public env (live only)
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        run: |
+          test -n "$WXT_PUBLIC_SUPABASE_URL" -a -n "$WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" -a -n "$WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID"
+          {
+            echo "WXT_PUBLIC_SUPABASE_URL=$WXT_PUBLIC_SUPABASE_URL"
+            echo "WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+            echo "WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID=$WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID"
+          } > .env.production.local
+        env:
+          WXT_PUBLIC_SUPABASE_URL: ${{ secrets.WXT_PUBLIC_SUPABASE_URL }}
+          WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }}
+      - name: Trusted production binding check
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        env:
+          CWS_REQUIRE_TRUSTED_BINDINGS: "1"
+          CWS_TRUSTED_SUPABASE_URL: ${{ secrets.CWS_TRUSTED_SUPABASE_URL }}
+          CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CWS_TRUSTED_SUPABASE_PUBLISHABLE_KEY }}
+          CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CWS_TRUSTED_GOOGLE_OAUTH_CLIENT_ID }}
+        run: node scripts/ci/cws-production-env-guard.mjs
+      - name: Map CWS credentials
+        if: vars.CWS_PIPELINE_ENABLED == 'true'
+        run: |
+          echo "CWS_CLIENT_ID=${CWS_CLIENT_ID:-$CHROME_CLIENT_ID}" >> "$GITHUB_ENV"
+          echo "CWS_CLIENT_SECRET=${CWS_CLIENT_SECRET:-$CHROME_CLIENT_SECRET}" >> "$GITHUB_ENV"
+          echo "CWS_REFRESH_TOKEN=${CWS_REFRESH_TOKEN:-$CHROME_REFRESH_TOKEN}" >> "$GITHUB_ENV"
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      - name: Tag release pipeline
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: bash scripts/ci/cws-tag-release.sh

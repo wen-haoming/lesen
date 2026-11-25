@@ -1,0 +1,17 @@
+{
+  "version": "1.8.9",
+  "provenance": "public/v1.8.9/PROVENANCE.json",
+  "sourceAttribution": "Lesen 1.8.9 real UI captures (T-11). Redacted labels preserved in filenames; sidebar is sidepanel.html narrow width, not native dock composition.",
+  "files": [
+    { "path": "public/v1.8.9/01-homeboard-redacted.png", "label": "homeboard", "role": "screenshot", "storeMarquee": true },
+    { "path": "public/v1.8.9/02-public-square.png", "label": "public-square", "role": "screenshot", "storeMarquee": true },
+    { "path": "public/v1.8.9/03-sidebar-redacted.png", "label": "sidepanel-narrow", "role": "screenshot", "storeMarquee": true },
+    { "path": "public/v1.8.9/04-add-x.png", "label": "add-x", "role": "screenshot" },
+    { "path": "public/v1.8.9/05-add-xueqiu.png", "label": "add-xueqiu", "role": "screenshot" },
+    { "path": "public/v1.8.9/07-settings-appearance.png", "label": "settings-appearance", "role": "screenshot" },
+    { "path": "public/v1.8.9/07b-settings-reading.png", "label": "settings-reading", "role": "screenshot" },
+    { "path": "public/v1.8.9/08-settings-account-redacted.png", "label": "settings-account-redacted", "role": "screenshot" },
+    { "path": "public/v1.8.9/09-settings-data.png", "label": "settings-data", "role": "screenshot" },
+    { "path": "public/v1.8.9/11-changelog.png", "label": "changelog-page", "role": "screenshot", "storeMarquee": true }
+  ]
+}

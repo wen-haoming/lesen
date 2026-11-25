@@ -1,0 +1,20 @@
+{
+  "product": "Lesen · 莱森",
+  "version": "1.8.9",
+  "captureDate": "2026-11-25",
+  "realUI": true,
+  "redaction": "Private account, contact and subscription labels masked where marked redacted. Sidebar is the real sidepanel page at narrow viewport, not a native docked composition.",
+  "files": [
+    "01-homeboard-redacted.png",
+    "02-public-square.png",
+    "03-sidebar-redacted.png",
+    "04-add-x.png",
+    "05-add-xueqiu.png",
+    "07-settings-appearance.png",
+    "07b-settings-reading.png",
+    "08-settings-account-redacted.png",
+    "09-settings-data.png",
+    "11-changelog.png"
+  ],
+  "excluded": "Weibo unavailable error and About tab animation transition are excluded from release promotion selection."
+}
