@@ -69,6 +69,7 @@ jobs:
       - run: node scripts/generate-release-images.mjs
       - run: node scripts/ci/assert-release-artifact-drill.mjs
       - run: node scripts/scan-release-artifacts.mjs
+      - run: node scripts/verify-doc-links.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: pr-release-drill-${{ github.run_id }}
@@ -143,6 +144,7 @@ jobs:
           node scripts/generate-release-images.mjs
           node scripts/ci/assert-release-artifact-drill.mjs
           node scripts/scan-release-artifacts.mjs
+          node scripts/verify-doc-links.mjs
       - uses: actions/upload-artifact@v4
         if: vars.CWS_PIPELINE_ENABLED != 'true'
         with:

@@ -40,12 +40,16 @@ if (!fs.existsSync(unpackedDir)) {
 const unpackedArchive = path.join(outDir, `lesen-${version}-unpacked.tar.gz`);
 run("tar", ["-czf", unpackedArchive, "-C", path.join(repoRoot, ".output"), "chrome-mv3"]);
 
+const sideloadZip = path.join(outDir, `lesen-${version}-sideload-chrome-mv3.zip`);
+run("zip", ["-rq", sideloadZip, "."], { cwd: unpackedDir });
+
 const sourceArchive = path.join(outDir, `lesen-${version}-source.tar.gz`);
 run("git", ["archive", "--format=tar.gz", "-o", sourceArchive, "HEAD"]);
 
 const sums = [];
 const entries = [
   { name: path.basename(unpackedArchive), path: unpackedArchive, kind: "unpacked" },
+  { name: path.basename(sideloadZip), path: sideloadZip, kind: "sideload-zip" },
   { name: path.basename(sourceArchive), path: sourceArchive, kind: "source" },
 ];
 
@@ -80,9 +84,11 @@ const manifest = {
     sha256: sha256File(e.path),
   })),
   chromeStoreZipIncluded: Boolean(storeZip),
-  notes: storeZip
-    ? "chrome-store zip is an official production pack when built with production WXT_PUBLIC_* and wxt zip."
-    : "No chrome-store zip in this run (expected for default local/CI build without production secrets).",
+  notes:
+    (storeZip
+      ? "chrome-store zip is an official production pack when built with production WXT_PUBLIC_* and wxt zip. "
+      : "No chrome-store zip in this run (expected for default local/CI build without production secrets). ") +
+    "sideload-zip is the chrome-mv3 folder for manual load; it is not signed for the Chrome Web Store and may omit production OAuth unless built with WXT_PUBLIC_*.",
 };
 fs.writeFileSync(path.join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n", "utf8");
 

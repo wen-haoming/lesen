@@ -1,3 +1,5 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { KNOWN_PUBLISHED_FLOOR } from './cws-tag-gate.mjs'
 import {
@@ -7,7 +9,10 @@ import {
   decideMasterVersionChange,
   decideVerifyOnlyFollowup,
   isZeroSha,
+  readWxtVersionAtSha,
 } from './cws-master-gate.mjs'
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 const shaA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 const shaB = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
@@ -230,6 +235,17 @@ describe('decideVerifyOnlyFollowup', () => {
       }).ok,
     ).toBe(false)
     expect(decideVerifyOnlyFollowup({ plan: {} }).ok).toBe(false)
+  })
+})
+
+describe('readWxtVersionAtSha', () => {
+  it('resolves productVersion from package.json at historical commit', () => {
+    const at = readWxtVersionAtSha({
+      repoRoot,
+      sha: '13ca1422c1b149b5f1b7a8613d61964bb271a855',
+    })
+    expect(at.ok).toBe(true)
+    expect(at.version).toBe('1.8.9')
   })
 })
 

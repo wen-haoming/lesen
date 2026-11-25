@@ -26,6 +26,7 @@
 | --- | --- | --- |
 | `lesen-*-unpacked.tar.gz` | 默认 `pnpm build` 后 `pnpm package:artifacts` | 开发者侧载 / QA，**非** 商店 OAuth 生产包 |
 | `lesen-*-source.tar.gz` | `git archive` | 源码归档 |
+| `lesen-*-sideload-chrome-mv3.zip` | `pnpm build` + `package-artifacts` | 用户侧载目录 zip，**默认 CI/Release 均生成** |
 | `lesen-*-chrome-store.zip` | `wxt zip` + 生产 `WXT_PUBLIC_*` | 商店上传包；本地默认构建**不会**生成 |
 | `SHA256SUMS.txt` | 与上同批次 | 校验和清单 |
 | `dist-artifacts/store-images/*` | `pnpm release:images` | 来自 `release-screenshots/public/` 的真实 UI；无截图时仅 icon + 版本说明卡 |

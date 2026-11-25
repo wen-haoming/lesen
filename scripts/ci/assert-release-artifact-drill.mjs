@@ -21,9 +21,14 @@ if (!fs.existsSync(dist)) {
   fail("missing dist-artifacts/ — run package-artifacts + generate-release-images first");
 }
 
-const unpacked = fs.readdirSync(dist).some((n) => /-unpacked\.tar\.gz$/i.test(n));
+const names = fs.readdirSync(dist);
+const unpacked = names.some((n) => /-unpacked\.tar\.gz$/i.test(n));
+const sideloadZip = names.some((n) => /-sideload-chrome-mv3\.zip$/i.test(n));
 if (!unpacked) {
   fail("missing *-unpacked.tar.gz in dist-artifacts/");
+}
+if (!sideloadZip) {
+  fail("missing *-sideload-chrome-mv3.zip in dist-artifacts/");
 }
 
 if (!fs.existsSync(sourcesPath)) {

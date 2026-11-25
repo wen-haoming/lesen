@@ -1,0 +1,45 @@
+name: Bug report
+description: Something broken in the extension or build
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先确认是否为最新商店版或你自构建的 commit；勿粘贴 token、refresh token 或完整 OAuth 回调 URL。
+  - type: input
+    id: version
+    attributes:
+      label: Lesen version
+      placeholder: "1.8.9"
+    validations:
+      required: true
+  - type: dropdown
+    id: channel
+    attributes:
+      label: Install channel
+      options:
+        - Chrome Web Store
+        - GitHub Release sideload
+        - Local pnpm build
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / background errors (redact PII)
+      description: Extension service worker or page console, no secrets
