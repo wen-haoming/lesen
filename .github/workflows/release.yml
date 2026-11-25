@@ -43,7 +43,7 @@ jobs:
             esac
           else
             VER="${{ inputs.version }}"
-            TAG="v${VER}"
+            TAG="lesen-v${VER}"
           fi
           if [ "$PKG" != "$VER" ]; then
             echo "package.json version $PKG does not match release target $VER"
@@ -80,6 +80,8 @@ jobs:
       - run: node scripts/verify-versions.mjs
       - run: node scripts/package-artifacts.mjs
       - run: node scripts/generate-release-images.mjs
+      - run: node scripts/ci/assert-release-artifact-drill.mjs
+      - run: node scripts/verify-doc-links.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: lesen-${{ needs.resolve-version.outputs.version }}-artifacts
@@ -164,13 +166,22 @@ jobs:
           fi
       - name: Write release notes
         if: env.RELEASE_EXISTS != '1'
-        run: node scripts/extract-release-notes.mjs "${{ needs.resolve-version.outputs.version }}" > release-notes.md
+        run: |
+          node scripts/extract-release-notes.mjs "${{ needs.resolve-version.outputs.version }}" > release-notes.md
+          {
+            echo ""
+            echo "## 下载与校验"
+            echo ""
+            echo "附件 \`lesen-${{ needs.resolve-version.outputs.version }}-sideload-chrome-mv3.zip\` 为可侧载扩展目录；\`SHA256SUMS.txt\` 用于校验。"
+            echo "安装步骤与商店差异见仓库 [docs/RELEASE_DOWNLOADS.md](https://github.com/${{ github.repository }}/blob/main/docs/RELEASE_DOWNLOADS.md)。"
+          } >> release-notes.md
       - name: Collect assets
         if: env.RELEASE_EXISTS != '1'
         run: |
-          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name '*.png' -o -name 'SOURCES.json' \) -print
+          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name 'manifest.json' -o -name 'PROVENANCE.json' -o -name '*.png' -o -name 'SOURCES.json' \) -print
           mkdir -p upload
-          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name '*.png' -o -name 'SOURCES.json' \) -exec cp {} upload/ \;
+          find release-assets -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name 'SHA256SUMS.txt' -o -name 'manifest.json' -o -name 'PROVENANCE.json' -o -name '*.png' -o -name 'SOURCES.json' \) -exec cp {} upload/ \;
+          test -n "$(find upload -maxdepth 1 -name 'lesen-*-sideload-chrome-mv3.zip' -print -quit)" || (echo "Missing sideload zip in release assets" && exit 1)
       - name: Create GitHub Release
         if: env.RELEASE_EXISTS != '1'
         uses: softprops/action-gh-release@v2

@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an idea (not guaranteed)
+title: "[feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What you are trying to do today without this feature?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: Optional sketch; maintainer may choose a different approach
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: I understand platform API limits may block this
+        - label: I am willing to open a PR with tests if maintainer agrees

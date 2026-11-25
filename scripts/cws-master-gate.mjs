@@ -58,8 +58,12 @@ export function readWxtVersionAtSha({ repoRoot, sha, filePath = WXT_REL } = {}) 
   const file = readGitTextAtSha({ repoRoot, sha, filePath });
   if (!file.ok) return { ok: false, version: null, error: file.error };
   const version = readWxtVersionFromText(file.text);
-  if (!version) return { ok: false, version: null, error: 'empty version' };
-  return { ok: true, version };
+  if (version) return { ok: true, version };
+  if (/version:\s*productVersion/.test(file.text)) {
+    const pkg = readPackageVersionAtSha({ repoRoot, sha });
+    if (pkg.ok) return { ok: true, version: pkg.version };
+  }
+  return { ok: false, version: null, error: 'empty version' };
 }
 
 export function isZeroSha(value) {
