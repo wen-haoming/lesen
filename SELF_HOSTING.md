@@ -19,4 +19,8 @@
 
 ## 发布边界
 
-没有商店自动送审、上传、部署工作流，也不附带发布认证脚本。自行发行前应使用自己的发布账号、审核数据政策和平台访问授权。不要用全局搜索替换内部 owlivo 存储键或协议名来改品牌。
+默认 `pnpm build` 为**本地/自部署**构建，不含原作者生产 OAuth 与 Supabase。商店级 zip 需要生产 `WXT_PUBLIC_*`（见 `.env.example` 与 `wxt.config.ts` 中 official zip 校验）。
+
+GitHub Actions 发布说明见 [`docs/RELEASE_MIGRATION.md`](./docs/RELEASE_MIGRATION.md)。工作流**不会**在 PR 上读取 secrets；CWS 上传仅支持受控的手动 `workflow_dispatch`。**CNB → GitHub 切换未完成前**，请勿假定 GitHub 路径已接管生产发布。
+
+自行发行前应使用自己的发布账号、审核数据政策和平台访问授权。不要用全局搜索替换内部 owlivo 存储键或协议名来改品牌。

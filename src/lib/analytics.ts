@@ -3,7 +3,9 @@ export const ANALYTICS_QUEUE_KEY = "analyticsQueue";
 export const ANALYTICS_ID_KEY = "analyticsInstallId";
 export const ANALYTICS_SURFACE_KEY = "analyticsSurface";
 export const ANALYTICS_ALARM = "owlivo-analytics-flush";
-export const RELEASE_VERSION = "1.8.7";
+import { PRODUCT_VERSION } from "./product-version";
+
+export const RELEASE_VERSION = PRODUCT_VERSION;
 export const ERROR_CATEGORIES = ["TypeError", "ReferenceError", "RangeError", "SyntaxError", "Error", "Rejection"] as const;
 export const EVENTS = [
   "reader_opened",

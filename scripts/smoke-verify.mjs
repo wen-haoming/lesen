@@ -41,6 +41,10 @@ const manifestPath = path.join(dist, "manifest.json");
 if (!fs.existsSync(manifestPath)) fail("manifest.json missing");
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+const pkgVersion = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
+if (manifest.version !== pkgVersion) {
+  fail(`manifest version ${manifest.version} != package.json ${pkgVersion}`);
+}
 const expectedCsp =
   "script-src 'self'; object-src 'self'; img-src 'self' https: data:; media-src 'self' https:";
 if (manifest.content_security_policy?.extension_pages !== expectedCsp) {

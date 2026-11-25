@@ -15,6 +15,11 @@ import {
 } from "./src/lib/wxt-public-env";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf8")) as { version?: string };
+const productVersion = String(packageJson.version || "").trim();
+if (!/^\d+\.\d+\.\d+$/.test(productVersion)) {
+  throw new Error(`package.json version must be semver x.y.z, got: ${productVersion || "(empty)"}`);
+}
 function readPublicEnvFile(name: string): Record<string, string> {
   const full = path.resolve(rootDir, name);
   if (!fs.existsSync(full)) return {};
@@ -74,7 +79,7 @@ export default defineConfig({
   manifest: {
     name: PRODUCT_DISPLAY_NAME_FULL,
     short_name: PRODUCT_DISPLAY_NAME,
-    version: "1.8.9",
+    version: productVersion,
     description:
       "Your feeds, together. 把你关注的信息，聚在一起。当前支持雪球、微博与 X 信息源；可在弹窗、独立窗口或侧栏中统一阅读。",
     icons: {
@@ -117,6 +122,9 @@ export default defineConfig({
     minimum_chrome_version: "114",
   },
   vite: () => ({
+    define: {
+      __LESEN_VERSION__: JSON.stringify(productVersion),
+    },
     resolve: {
       alias: {
         "@": path.resolve(rootDir, "src"),

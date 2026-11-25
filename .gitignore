@@ -19,3 +19,5 @@ coverage/
 .preparation-audit/
 .preparation-source.json
 *.zip
+dist-artifacts/
+release-screenshots/incoming/
