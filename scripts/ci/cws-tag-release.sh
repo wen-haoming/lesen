@@ -52,7 +52,7 @@ node scripts/verify-versions.mjs
 
 if [[ "$PIPELINE_LIVE" != "1" ]]; then
   echo "cws-tag-release: pipeline disabled — dry-run release"
-  node scripts/cws.mjs release --dry-run
+  node scripts/cws.mjs release --dry-run --mock-status @scripts/fixtures/cws-store-published-1.8.4.mock.json
   exit 0
 fi
 

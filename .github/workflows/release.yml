@@ -64,6 +64,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.11.1
@@ -99,6 +101,8 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.11.1
@@ -151,6 +155,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           pattern: lesen-${{ needs.resolve-version.outputs.version }}-*
@@ -172,8 +178,14 @@ jobs:
             echo ""
             echo "## 下载与校验"
             echo ""
-            echo "附件 \`lesen-${{ needs.resolve-version.outputs.version }}-sideload-chrome-mv3.zip\` 为可侧载扩展目录；\`SHA256SUMS.txt\` 用于校验。"
-            echo "安装步骤与商店差异见仓库 [docs/RELEASE_DOWNLOADS.md](https://github.com/${{ github.repository }}/blob/main/docs/RELEASE_DOWNLOADS.md)。"
+            echo "**可安装包（侧载）**：附件 \`lesen-${{ needs.resolve-version.outputs.version }}-sideload-chrome-mv3.zip\` 解压后在 Chrome「开发者模式」→「加载已解压的扩展程序」指向解压目录。"
+            echo "**非安装用途**：\`lesen-*-source.tar.gz\` 为源码归档；PNG 截图为商店/说明用，不能直接当扩展安装。"
+            echo ""
+            echo "**与 Chrome 网上应用店版的差异（本 Release 默认构建）**：不含官方生产 OAuth/分析公网配置，需自配 \`.env.production.local\` 后本地 \`pnpm build\` 才能得到与商店接近的登录能力；**无自动更新**，版本需自行跟进后续 Release。"
+            echo "无需自配即可用的能力：本地阅读、雪球/X/微博源（在各自站点登录前提下）、设置与公开广场等核心浏览功能（以当前构建为准）。"
+            echo ""
+            echo "校验：\`SHA256SUMS.txt\`；安装步骤详见 [docs/RELEASE_DOWNLOADS.md](https://github.com/${{ github.repository }}/blob/main/docs/RELEASE_DOWNLOADS.md)。"
+            echo "Chrome 网上应用店送审与自动更新仍走既有 CNB/运维流程；本 GitHub Release **不**代表商店已上架新版本。"
           } >> release-notes.md
       - name: Collect assets
         if: env.RELEASE_EXISTS != '1'
