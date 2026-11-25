@@ -16,6 +16,7 @@ on:
       - "vitest.config.ts"
       - "public/**"
       - "icons/**"
+      - "release-screenshots/**"
   pull_request:
     paths:
       - "src/**"
@@ -23,6 +24,8 @@ on:
       - "CHANGELOG.md"
       - "package.json"
       - "wxt.config.ts"
+      - "release-screenshots/**"
+      - "icons/**"
 
 permissions:
   contents: read

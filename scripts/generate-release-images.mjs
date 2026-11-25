@@ -1,92 +1,118 @@
 #!/usr/bin/env node
 /**
- * Release / store images: real UI from release-screenshots/ only.
- * No fabricated product UI. Fallback: repo icon + optional CHANGELOG version card.
+ * Release / store images from release-screenshots/ only (real UI). No fabricated UI.
  */
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { readPackageVersion, repoRoot } from "./lib/read-package-version.mjs";
-import { findReleaseSection } from "./lib/changelog-release-notes.mjs";
 import { resolveScreenshotInputs, screenshotRoots } from "./lib/store-images.mjs";
 
 const version = readPackageVersion();
 const outDir = path.join(repoRoot, "dist-artifacts", "store-images");
-fs.mkdirSync(outDir, { recursive: true });
+const sourceDir = path.join(outDir, "source");
+const marqueeDir = path.join(outDir, "store-1280x800");
+const tileDir = path.join(outDir, "store-440x280");
+
+for (const dir of [outDir, sourceDir, marqueeDir, tileDir]) {
+  fs.mkdirSync(dir, { recursive: true });
+}
 
 const iconPath = path.join(repoRoot, "icons", "icon128.png");
-if (!fs.existsSync(iconPath)) {
-  console.error("icons/icon128.png missing");
-  process.exit(1);
+const { manifest, screenshots } = resolveScreenshotInputs();
+const provenancePath = manifest?.provenance
+  ? path.join(repoRoot, "release-screenshots", manifest.provenance)
+  : path.join(repoRoot, "release-screenshots", "public", `v${version}`, "PROVENANCE.json");
+const provenance = fs.existsSync(provenancePath)
+  ? JSON.parse(fs.readFileSync(provenancePath, "utf8"))
+  : null;
+
+function sha256File(filePath) {
+  return createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
-const { manifest, screenshots } = resolveScreenshotInputs();
+function storeMarqueeFlag(input) {
+  if (!manifest?.files?.length) return false;
+  const rel = path
+    .relative(path.join(repoRoot, "release-screenshots"), input.abs)
+    .replace(/\\/g, "/");
+  const entry = manifest.files.find((f) => f.path === rel);
+  return Boolean(entry?.storeMarquee);
+}
+
+async function fitCanvas(inputPath, outPath, width, height) {
+  const bg = { r: 248, g: 250, b: 252, alpha: 1 };
+  const fitted = await sharp(inputPath)
+    .resize(width, height, { fit: "contain", background: bg })
+    .png()
+    .toBuffer();
+  await sharp(fitted).png().toFile(outPath);
+}
+
 const assetRecords = [];
 
-async function copyScreenshot(input, index) {
-  const baseName = `screenshot-${String(index + 1).padStart(2, "0")}-${path.basename(input.abs, path.extname(input.abs))}.png`;
-  const outPath = path.join(outDir, baseName);
-  await sharp(input.abs).png().toFile(outPath);
-  assetRecords.push({
-    file: baseName,
-    kind: "ui-screenshot",
+async function processScreenshot(input, index) {
+  const base = path.basename(input.abs, path.extname(input.abs));
+  const meta = await sharp(input.abs).metadata();
+  const sourceName = `${String(index + 1).padStart(2, "0")}-${base}.png`;
+  const sourceOut = path.join(sourceDir, sourceName);
+  await sharp(input.abs).png().toFile(sourceOut);
+  const sourceSha = sha256File(sourceOut);
+
+  const record = {
+    file: sourceName,
+    kind: "ui-screenshot-source",
     source: path.relative(repoRoot, input.abs),
     label: input.label,
-  });
-  return outPath;
-}
+    originalWidth: meta.width,
+    originalHeight: meta.height,
+    sha256: sourceSha,
+  };
 
-async function writeIcon() {
-  const outPath = path.join(outDir, "store-icon-128.png");
-  await sharp(iconPath).resize(128, 128).png().toFile(outPath);
-  assetRecords.push({ file: "store-icon-128.png", kind: "icon", source: "icons/icon128.png" });
-  return outPath;
-}
+  const marqueeName = `${String(index + 1).padStart(2, "0")}-${base}-1280x800.png`;
+  const marqueeOut = path.join(marqueeDir, marqueeName);
+  await fitCanvas(input.abs, marqueeOut, 1280, 800);
+  record.marquee1280 = { file: marqueeName, sha256: sha256File(marqueeOut) };
 
-function escapeXml(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+  if (storeMarqueeFlag(input) || index < 4) {
+    const tileName = `${String(index + 1).padStart(2, "0")}-${base}-440x280.png`;
+    const tileOut = path.join(tileDir, tileName);
+    await fitCanvas(input.abs, tileOut, 440, 280);
+    record.tile440 = { file: tileName, sha256: sha256File(tileOut) };
+  }
 
-async function writeVersionCard() {
-  const changelog = fs.readFileSync(path.join(repoRoot, "CHANGELOG.md"), "utf8");
-  const section = findReleaseSection(changelog, version) || "";
-  const bullets = section
-    .split("\n")
-    .filter((line) => line.startsWith("- "))
-    .map((line) => line.slice(2).trim())
-    .slice(0, 4);
-  const bulletSvg = bullets.length
-    ? bullets
-        .map((b, i) => `<text x="48" y="${160 + i * 32}" font-size="20" fill="#334155" font-family="system-ui,sans-serif">${escapeXml(b)}</text>`)
-        .join("\n")
-    : `<text x="48" y="160" font-size="20" fill="#64748b" font-family="system-ui,sans-serif">见 CHANGELOG.md</text>`;
-
-  const svg = Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
-<svg width="880" height="400" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#f8fafc"/>
-  <text x="48" y="72" font-size="32" font-weight="700" fill="#0f172a" font-family="system-ui,sans-serif">Lesen · 莱森 v${escapeXml(version)}</text>
-  <text x="48" y="108" font-size="16" fill="#64748b" font-family="system-ui,sans-serif">版本说明卡（非产品界面截图）</text>
-  ${bulletSvg}
-</svg>`);
-  const outPath = path.join(outDir, "version-card-changelog.png");
-  await sharp(svg).png().toFile(outPath);
-  assetRecords.push({
-    file: "version-card-changelog.png",
-    kind: "version-card",
-    source: `CHANGELOG.md#${version}`,
-  });
-  return outPath;
+  assetRecords.push(record);
+  return record;
 }
 
 for (let i = 0; i < screenshots.length; i++) {
-  await copyScreenshot(screenshots[i], i);
+  await processScreenshot(screenshots[i], i);
 }
-await writeIcon();
-await writeVersionCard();
+
+const iconOut = path.join(outDir, "store-icon-128.png");
+await sharp(iconPath).resize(128, 128).png().toFile(iconOut);
+assetRecords.push({
+  file: "store-icon-128.png",
+  kind: "icon",
+  source: "icons/icon128.png",
+  sha256: sha256File(iconOut),
+});
+
+const sums = [];
+for (const dir of [sourceDir, marqueeDir, tileDir, outDir]) {
+  if (!fs.existsSync(dir)) continue;
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(".png")) continue;
+    const full = path.join(dir, name);
+    sums.push(`${sha256File(full)}  ${path.relative(outDir, full)}`);
+  }
+}
+fs.writeFileSync(path.join(outDir, "SHA256SUMS.txt"), `${sums.join("\n")}\n`, "utf8");
+
+if (provenance) {
+  fs.copyFileSync(provenancePath, path.join(outDir, "PROVENANCE.json"));
+}
 
 const roots = screenshotRoots();
 const meta = {
@@ -95,16 +121,16 @@ const meta = {
   mode: screenshots.length ? "ui-screenshots" : "placeholder-pending-screenshots",
   screenshotInputRoot: path.relative(repoRoot, roots.SCREENSHOT_ROOT),
   manifestPresent: Boolean(manifest),
+  provenance: provenance || null,
+  fitPolicy: "contain with #f8fafc letterbox (no stretch)",
   assets: assetRecords,
   pendingRealUi: screenshots.length === 0,
-  instructions:
-    "Add sanitized PNGs under release-screenshots/public/ (see release-screenshots/README.md). Re-run pnpm release:images.",
 };
 if (!screenshots.length) {
   meta.notice =
-    "No UI screenshots in release-screenshots/public/ or incoming/ — only icon + changelog version card were emitted.";
+    "No UI screenshots in release-screenshots/public/ — add PNGs and manifest, then re-run.";
 }
 
 fs.writeFileSync(path.join(outDir, "SOURCES.json"), JSON.stringify(meta, null, 2) + "\n", "utf8");
 console.log("[generate-release-images] OK");
-console.log(JSON.stringify(meta, null, 2));
+console.log(JSON.stringify({ mode: meta.mode, count: screenshots.length, outDir: path.relative(repoRoot, outDir) }));

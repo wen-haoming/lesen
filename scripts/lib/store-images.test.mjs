@@ -8,11 +8,13 @@ describe("store-images inputs", () => {
     const { SCREENSHOT_ROOT, PUBLIC_DIR } = screenshotRoots();
     expect(fs.existsSync(SCREENSHOT_ROOT)).toBe(true);
     expect(fs.existsSync(PUBLIC_DIR)).toBe(true);
-    expect(fs.existsSync(path.join(SCREENSHOT_ROOT, "README.md"))).toBe(true);
   });
 
-  it("returns empty screenshots until public pack is committed", () => {
-    const { screenshots } = resolveScreenshotInputs();
-    expect(screenshots).toEqual([]);
+  it("loads v1.8.9 public T-11 screenshots from manifest", () => {
+    const { screenshots, manifest } = resolveScreenshotInputs();
+    expect(manifest?.version).toBe("1.8.9");
+    expect(screenshots.length).toBe(10);
+    expect(screenshots[0].abs).toContain("01-homeboard-redacted.png");
+    expect(fs.existsSync(path.join(screenshotRoots().SCREENSHOT_ROOT, "public/v1.8.9/PROVENANCE.json"))).toBe(true);
   });
 });

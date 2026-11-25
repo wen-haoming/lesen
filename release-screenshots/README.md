@@ -1,32 +1,39 @@
 # Lesen 商店 / 发布配图（真实 UI 截图）
 
-本目录是 **唯一** 的产品 UI 截图输入入口。流水线**不**合成虚构界面；账户/登录相关页面由采集方单独提供，Agent 不会重复采集。
+本目录是 **唯一** 的产品 UI 输入。流水线**不**合成、不重绘、不抹除脱敏标注。
+
+## 当前包（v1.8.9）
+
+- 路径：`public/v1.8.9/`（10 张 PNG + `PROVENANCE.json`）
+- 来源：已安装正式 **Lesen 1.8.9** 真实界面；账号/订阅/联系方式在 `*-redacted` 文件中已遮盖（**保留**脱敏样式，流水线不二次处理像素）
+- **侧栏**：`03-sidebar-redacted.png` 为真实 `sidepanel.html` 窄宽页面截图，**不是**浏览器原生侧栏停靠合影
+- **未纳入**：微博服务不可用错误页、关于页动画过渡帧（见 `PROVENANCE.json`）
+
+代表性文件（完整列表见 `manifest.json`）：
+
+- [`01-homeboard-redacted.png`](public/v1.8.9/01-homeboard-redacted.png) — 多栏首页
+- [`02-public-square.png`](public/v1.8.9/02-public-square.png) — 公开广场
+- [`03-sidebar-redacted.png`](public/v1.8.9/03-sidebar-redacted.png) — 侧栏（窄宽 sidepanel）
+
+## 生成
+
+```sh
+pnpm release:images
+```
+
+产出：`dist-artifacts/store-images/`
+
+| 子目录 | 说明 |
+| --- | --- |
+| `source/` | 源尺寸 PNG（未拉伸） |
+| `store-1280x800/` | 商店大图，`contain` + 留白 |
+| `store-440x280/` | 商店缩略图 |
+| `SOURCES.json` / `SHA256SUMS.txt` / `PROVENANCE.json` | 元数据 |
 
 ## 目录约定
 
 | 路径 | 用途 |
 | --- | --- |
-| `public/` | 可提交到仓库的脱敏截图包（公司 Mac 采集完成后复制到此） |
-| `incoming/` | 本地临时投放区（已 gitignore，适合 CI 通过 `workflow_dispatch` 上传 artifact 前本地试验） |
-| `manifest.json` | 可选；声明文件名 → 商店用途映射（见 `manifest.example.json`） |
-
-## 如何接入 T-11 截图包
-
-1. 将脱敏后的 PNG 放入 `release-screenshots/public/`（可分子目录，如 `public/v1.8.9/`）。
-2. 可选：复制 `manifest.example.json` 为 `manifest.json` 并填写 `files` 列表。
-3. 运行 `pnpm release:images` → 产出在 `dist-artifacts/store-images/`。
-4. Release / CWS 工作流会自动跑同一脚本并上传 artifact。
-
-## 文件名建议（无 manifest 时的默认排序）
-
-按字母序取前 N 张作为商店轮播素材；建议使用：
-
-- `01-popup.png` — 弹窗阅读
-- `02-sidepanel.png` — 侧栏
-- `03-home.png` — 多列首页
-- `04-discover.png` — 发现页  
-  （**不要**在此目录放置含私人订阅、私信、token 或完整账号资料的截图。）
-
-## 当前状态
-
-仓库内 **尚无** 提交的 `public/` 截图。合并发布管线 PR 后，待你方 T-11 包就绪再放入；在此之前仅生成 `store-icon-128.png` 与可选 CHANGELOG 版本卡。
+| `manifest.json` | 文件列表与 `storeMarquee` 标记 |
+| `public/vX.Y.Z/` | 可提交的脱敏截图包 |
+| `incoming/` | 本地试验（gitignore） |
