@@ -356,7 +356,7 @@ async function writePlanFile(payload, env) {
 }
 
 async function cmdPlan(flags, env) {
-  if (isPipelineContext(env) && flags.mockStatus) {
+  if (isPipelineContext(env) && flags.mockStatus && !flags.dryRun) {
     logError('CNB 环境的 plan 不得使用 --mock-status');
     return 1;
   }
