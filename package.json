@@ -18,7 +18,10 @@
     "release:images": "node scripts/generate-release-images.mjs",
     "release:notes": "node scripts/extract-release-notes.mjs",
     "zip": "wxt zip",
-    "store:zip": "wxt zip"
+    "store:zip": "wxt zip",
+    "cws:plan": "node scripts/cws.mjs plan",
+    "cws:status": "node scripts/cws.mjs status",
+    "cws:release:dry-run": "node scripts/cws.mjs release --dry-run --mock-status @scripts/fixtures/cws-store-published-1.8.4.mock.json"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -46,7 +49,6 @@
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.2",
-    "chrome-webstore-upload": "3.2.0",
     "sharp": "^0.35.5",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",

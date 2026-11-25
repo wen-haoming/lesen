@@ -34,9 +34,17 @@
 
 | 工作流 | 触发 | Secrets |
 | --- | --- | --- |
-| `.github/workflows/ci.yml` | `push` / `pull_request` | **无** |
-| `.github/workflows/release.yml` | `v*.*.*` tag 或 `workflow_dispatch` | 可选：`chrome-web-store` Environment 下的生产 `WXT_PUBLIC_*` |
-| `.github/workflows/chrome-web-store.yml` | **仅** `workflow_dispatch` | **必需**（见下表） |
+| `.github/workflows/ci.yml` | `push` / `pull_request` | **无**；含 CWS 单测 + mock `plan` |
+| `.github/workflows/cws-pipeline.yml` | **`main` push**（paths 过滤）/ **`lesen-v*.*.*` 或 `owlivo-v*.*.*` tag** | live 需 Environment + `CWS_PIPELINE_ENABLED=true` |
+| `.github/workflows/release.yml` | tag（GitHub Release 资产）/ `workflow_dispatch` | 可选生产 `WXT_PUBLIC_*`（商店 zip 工件） |
+
+### CWS 语义（对齐原 CNB）
+
+- **标签**：`lesen-vX.Y.Z` 或兼容 `owlivo-vX.Y.Z`，须与 `package.json` 一致、高于 `CWS_KNOWN_PUBLISHED_FLOOR`（默认 `1.8.4`，可覆盖）、commit 对齐。  
+- **main**：相对 `github.event.before` **版本递增**才允许 live 送审；未递增走 `VERIFY_ONLY`（同版本 skip / 其它版本在审 fail-closed）。  
+- **上传前**：`scripts/cws-lib.mjs` + `scripts/cws.mjs` 按 live `fetchStatus` 幂等；不 cancel、不盲重试；`skipReview` 恒 `false`。  
+- **共锁**：`concurrency: cws-release-${{ github.repository }}`，`cancel-in-progress: false`。  
+- **默认**：`CWS_PIPELINE_ENABLED` **未设或为 false** → 仅门禁 + 质量链 + **`release --dry-run`**（不实际上传）。
 
 ### PR / CI 现状（核验于 2026-11-25）
 
@@ -52,9 +60,9 @@
 | `WXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 生产 publishable key |
 | `WXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID` | 商店扩展 ID 对应的 Chrome Extension OAuth 客户端 |
 | `WXT_PUBLIC_ANALYTICS_ENDPOINT` | 可选；允许的 workers.dev `/v1/events` |
-| `CHROME_CLIENT_ID` | CWS API OAuth（与 refresh token 同项目） |
-| `CHROME_CLIENT_SECRET` | CWS API |
-| `CHROME_REFRESH_TOKEN` | `chrome.webstore` scope；**禁止** 写入仓库文件 |
+| `CWS_CLIENT_ID` / `CHROME_CLIENT_ID` | CWS API OAuth（与用户 Google 登录分离；二者别名） |
+| `CWS_CLIENT_SECRET` / `CHROME_CLIENT_SECRET` | CWS API |
+| `CWS_REFRESH_TOKEN` / `CHROME_REFRESH_TOKEN` | `chromewebstore` scope |
 
 扩展 ID（非 secret）：`dakdgplahfkbblfpafdjeipneioajgdf`
 
@@ -76,7 +84,7 @@ node scripts/extract-release-notes.mjs
 1. 在 GitHub 配置 `chrome-web-store` Environment 与 secrets（对照 CNB 变量脱敏核对，**勿猜测** OAuth 客户端类型）。  
 2. 合并本 PR 后，在 **不升版本** 前提下用 `workflow_dispatch` 跑 `release`（`create_github_release: false`）验证 artifacts。  
 3. 确认 CWS 当前在审版本后，再决定是否升 `package.json` / `CHANGELOG` 并打 `vX.Y.Z` tag。  
-4. 运行 `chrome-web-store` workflow：`publish: false` 先上传草稿 → 人工验收 → 再 `publish: true` 送审。  
+4. 影子比对 CNB dry-run/live `plan` 后，设 `vars.CWS_PIPELINE_ENABLED=true`，先 **tag 单侧**试跑，再考虑 main 自动送审。  
 5. **CNB 仍可用期间** 保持单侧发布，确认 GitHub 路径稳定后再停用 CNB（由你方操作，本文档不声明“已完成迁移”）。
 
 ## 图片素材说明

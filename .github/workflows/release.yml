@@ -3,7 +3,8 @@ name: release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "lesen-v*.*.*"
+      - "owlivo-v*.*.*"
   workflow_dispatch:
     inputs:
       version:
@@ -32,7 +33,12 @@ jobs:
           PKG="$(node -p "require('./package.json').version")"
           if [ "${{ github.event_name }}" = "push" ]; then
             TAG="${GITHUB_REF#refs/tags/}"
-            VER="${TAG#v}"
+            case "$TAG" in
+              lesen-v*) VER="${TAG#lesen-v}" ;;
+              owlivo-v*) VER="${TAG#owlivo-v}" ;;
+              v*) VER="${TAG#v}" ;;
+              *) VER="$TAG" ;;
+            esac
           else
             VER="${{ inputs.version }}"
             TAG="v${VER}"
